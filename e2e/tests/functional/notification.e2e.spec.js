@@ -43,36 +43,65 @@ test.describe('Notifications List', () => {
       message: 'Error message'
     });
 
+    // Wait for notification indicator to be visible and show count of 1
+    await expect(
+      page.locator('button[aria-label*="Review"][aria-label*="Notifications"]')
+    ).toBeVisible();
+    await expect(page.locator('button[aria-label="Review 1 Notification"]')).toBeVisible({
+      timeout: 10000
+    });
+
     // Create an alert notification with the message "Alert message"
     await createNotification(page, {
       severity: 'alert',
       message: 'Alert message'
     });
 
-    // Verify that there is a button with aria-label "Review 2 Notifications"
-    expect(await page.locator('button[aria-label="Review 2 Notifications"]').count()).toBe(1);
+    // Wait for notification indicator to update to show count of 2
+    await expect(page.locator('button[aria-label="Review 2 Notifications"]')).toBeVisible({
+      timeout: 10000
+    });
 
     // Click on button with aria-label "Review 2 Notifications"
-    await page.click('button[aria-label="Review 2 Notifications"]');
+    await page.locator('button[aria-label="Review 2 Notifications"]').click();
+
+    // Wait for dialog to be visible and notifications to be loaded
+    await expect(page.locator('div[role="dialog"]')).toBeVisible();
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).toHaveCount(2, {
+      timeout: 5000
+    });
+
+    // Verify both notifications are present before dismissing
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).toContainText(
+      'Error message'
+    );
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).toContainText(
+      'Alert message'
+    );
 
     // Click on button with aria-label="Dismiss notification of Error message"
-    await page.click('button[aria-label="Dismiss notification of Error message"]');
+    await page.locator('button[aria-label="Dismiss notification of Error message"]').click();
 
-    // Verify there is no a notification (listitem) with the text "Error message" since it was dismissed
-    expect(await page.locator('div[role="dialog"] div[role="listitem"]').innerText()).not.toContain(
+    // Wait for the error notification to be removed and only one notification remains
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).toHaveCount(1, {
+      timeout: 5000
+    });
+
+    // Verify there is no notification with "Error message" since it was dismissed
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).not.toContainText(
       'Error message'
     );
 
-    // Verify there is still a notification (listitem) with the text "Alert message"
-    expect(await page.locator('div[role="dialog"] div[role="listitem"]').innerText()).toContain(
+    // Verify there is still a notification with "Alert message"
+    await expect(page.locator('div[role="dialog"] div[role="listitem"]')).toContainText(
       'Alert message'
     );
 
     // Click on button with aria-label="Dismiss notification of Alert message"
-    await page.click('button[aria-label="Dismiss notification of Alert message"]');
+    await page.locator('button[aria-label="Dismiss notification of Alert message"]').click();
 
-    // Verify that there is no dialog since the notification overlay was closed automatically after all notifications were dismissed
-    expect(await page.locator('div[role="dialog"]').count()).toBe(0);
+    // Wait for dialog to be detached from DOM (accounts for animation)
+    await expect(page.locator('div[role="dialog"]')).toBeHidden({ timeout: 2000 });
   });
 });
 
@@ -91,28 +120,31 @@ test.describe('Notification Overlay', () => {
     // Create a new Display Layout object
     await createDomainObjectWithDefaults(page, { type: 'Display Layout' });
 
-    // Click on the button "Review 1 Notification"
-    await page.click('button[aria-label="Review 1 Notification"]');
+    // Wait for and click on the button "Review 1 Notification"
+    await expect(page.locator('button[aria-label="Review 1 Notification"]')).toBeVisible({
+      timeout: 10000
+    });
+    await page.locator('button[aria-label="Review 1 Notification"]').click();
 
     // Verify that Notification List is open
-    expect(await page.locator('div[role="dialog"]').isVisible()).toBe(true);
+    await expect(page.locator('div[role="dialog"]')).toBeVisible();
 
     // Wait until there is no Notification Banner
-    await page.waitForSelector('div[role="alert"]', { state: 'detached' });
+    await expect(page.locator('div[role="alert"]')).toBeHidden({ timeout: 10000 });
 
     // Click on the "Close" button of the Notification List
-    await page.click('button[aria-label="Close"]');
+    await page.locator('button[aria-label="Close"]').click();
 
     // On the Display Layout object, click on the "Edit" button
-    await page.click('button[title="Edit"]');
+    await page.locator('button[title="Edit"]').click();
 
     // Click on the "Save" button
-    await page.click('button[title="Save"]');
+    await page.locator('button[title="Save"]').click();
 
     // Click on the "Save and Finish Editing" option
-    await page.click('li[title="Save and Finish Editing"]');
+    await page.locator('li[title="Save and Finish Editing"]').click();
 
     // Verify that Notification List is NOT open
-    expect(await page.locator('div[role="dialog"]').isVisible()).toBe(false);
+    await expect(page.locator('div[role="dialog"]')).toBeHidden();
   });
 });
